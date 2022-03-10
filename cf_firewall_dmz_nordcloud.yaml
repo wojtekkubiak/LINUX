@@ -28,13 +28,7 @@ Parameters:
       first Availability Zone
     Type: String
     Default: 172.18.200.0/24
-  PrivateSubnet2CIDR:
-    Description: >-
-      Please enter the IP range (CIDR notation) for the private subnet in the
-      second Availability Zone
-    Type: String
-    Default: 172.18.210.0/24
-  PrivateSubnet3CIDR:
+  FirewallSubnetCIDR:
     Description: >-
       Please enter the IP range (CIDR notation) for the private subnet in the
       second Availability Zone
@@ -140,26 +134,14 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${NameOfService} - Private Subnet (AZ1)'
-  PrivateSubnet2:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref VPC1
-      AvailabilityZone: !Select 
-        - 1
-        - !GetAZs ''
-      CidrBlock: !Ref PrivateSubnet2CIDR
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub '${NameOfService} - Private Subnet (AZ2)'
-  PrivateSubnet3:
+  FirewallSubnet:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC1
       AvailabilityZone: !Select 
         - 0
         - !GetAZs ''
-      CidrBlock: !Ref PrivateSubnet3CIDR
+      CidrBlock: !Ref FirewallSubnetCIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -209,22 +191,16 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       VpcEndpointId: !GetAtt NetworkDMZFirewallVpceIds.FwVpceId1
-
   PrivateSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet1
-  PrivateSubnet2RouteTableAssociation:
+  FirewallSubnetRouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref PrivateSubnet2
-  PrivateSubnet3RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref PrivateSubnet3
+      SubnetId: !Ref FirewallSubnet
   S3Endpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
@@ -341,113 +317,6 @@ Resources:
           DeviceIndex: '0'
           GroupSet:
             - !Ref OpenHTTPSecurityGroup
-  Ec2Instance2:
-    Type: 'AWS::EC2::Instance'
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT5M
-    Metadata:
-      'AWS::CloudFormation::Init':
-        configSets:
-          InstallAndRun:
-            - phpinstall
-        phpinstall:
-          packages:
-            yum:
-              httpd: []
-              php: []
-              htop: []
-          files:
-            /var/www/html/index.php:
-              content: !Sub <?php print "Hello world Wojtek was here!"; ?>
-              mode: '000600'
-              owner: apache
-              group: apache
-          services:
-            sysvinit:
-              httpd:
-                enabled: 'true'
-                ensureRunning: 'true'
-      'AWS::CloudFormation::Designer':
-        id: 07771dca-81e2-4cd3-a558-5f5866fb0db1
-    Properties:
-      InstanceType: !Ref InstanceType
-      ImageId:
-        'Fn::FindInMap':
-          - RegionMap
-          - !Ref 'AWS::Region'
-          - AMI
-      Tags:
-        - Key: Name
-          Value: !Join 
-            - ''
-            - - !Ref NameOfService
-              - ' - '
-              - EC2 Public 1
-        - Key: DoNotStop
-          Value: !Join 
-            - ''
-            - - 'EC2 Instance for '
-              - !Ref 'AWS::Region'
-              - ' in flow style by WoKu'
-        - Key: Comment 2
-          Value: !Join 
-            - ''
-            - - 'EC2 Instance for '
-              - !Ref 'AWS::Region'
-              - ' in block style by WoKu'
-      #KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref Ec2InstanceProfile
-      UserData:
-        'Fn::Base64': !Sub >
-          #!/bin/bash
-
-          cd /tmp
-
-          yum install -y
-          https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
-
-          systemctl enable amazon-ssm-agent
-
-          systemctl start amazon-ssm-agent       
-
-          # Install stress tools
-
-          #amazon-linux-extras install epel -y
-
-          #yum install stress -y  
-
-          # Ensure AWS CFN Bootstrap is the latest
-
-          yum install -y aws-cfn-bootstrap
-
-          # Install the files and packages from the metadata
-
-          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource
-          Ec2Instance2 --configset InstallAndRun --region ${AWS::Region}
-
-          # Install deamon to listen for metadata changes
-
-          #
-
-          # Check if instance is sending signal back to creation policy after
-          the stack successfull
-
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource
-          Ec2Instance2 --region ${AWS::Region}
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeType: gp2
-            DeleteOnTermination: 'true'
-            VolumeSize: !Ref InstanceHDDSize
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: 'true'
-          SubnetId: !Ref PublicSubnet1
-          DeviceIndex: '0'
-          GroupSet:
-            - !Ref SecurityGroup2
-
   NetworkLoadBalancer:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Description: 'The NLB that handles network traffic coming into protected subnet'
@@ -640,7 +509,7 @@ Resources:
       FirewallPolicyArn: !Ref NetworkDMZFirewallPolicy
       VpcId: !Ref VPC1
       SubnetMappings:
-        - SubnetId: !Ref PrivateSubnet3
+        - SubnetId: !Ref FirewallSubnet
       Description: Firewall description goes here
       Tags:
         - Key: Name
@@ -797,10 +666,6 @@ Outputs:
   VPC:
     Description: A reference to the created VPC
     Value: !Ref VPC1
-  PublicIp:
-    Value: !GetAtt 
-      - Ec2Instance2
-      - PublicIp
   Website:
-    Description: Public DNS for ec2
-    Value: !Sub 'http://${Ec2Instance2.PublicDnsName}'
+    Description: Public DNS for Application Loadballancer
+    Value: !Sub 'http://${ApplicationLoadBalancer.PublicDnsName}'
