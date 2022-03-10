@@ -1,34 +1,48 @@
 Parameters:
   NameOfService:
-    Description: "The name of the service this stack is to be used for."
+    Description: The name of the service this stack is to be used for.
     Type: String
-  KeyName:
-    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
-    Type: AWS::EC2::KeyPair::KeyName
+#  KeyName:
+#    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+#    Type: 'AWS::EC2::KeyPair::KeyName'
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
     Default: 172.18.0.0/16
   PublicSubnet1CIDR:
-    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Description: >-
+      Please enter the IP range (CIDR notation) for the public subnet in the
+      first Availability Zone
     Type: String
     Default: 172.18.10.0/24
   PublicSubnet2CIDR:
-    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Description: >-
+      Please enter the IP range (CIDR notation) for the public subnet in the
+      second Availability Zone
     Type: String
     Default: 172.18.11.0/24
   PrivateSubnet1CIDR:
-    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Description: >-
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      first Availability Zone
     Type: String
     Default: 172.18.200.0/24
+  PrivateSubnet2CIDR:
+    Description: >-
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      second Availability Zone
+    Type: String
+    Default: 172.18.210.0/24
   PrivateSubnet3CIDR:
-    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Description: >-
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      second Availability Zone
     Type: String
     Default: 172.18.123.0/24
   SafePublicIp:
     Description: Please enter the IP from you can establish safe connection
     Type: String
-    Default: 77.32.245.80/28
+    Default: 83.142.194.60/32
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -56,139 +70,176 @@ Mappings:
       AMI: ami-06bfd6343550d4a29
     eu-west-3:
       AMI: ami-0d3c032f5934e1b41
-      
-Resources: 
+Resources:
   VPC1:
-    Type: AWS::EC2::VPC
+    Type: 'AWS::EC2::VPC'
     Properties:
       CidrBlock: !Ref VpcCIDR
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Join [ "", [ !Ref NameOfService, " - ", "VPC" ] ]
-
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 2b1b327f-0076-4fdc-8f15-28511b233236
   InternetGateway:
-    Type: AWS::EC2::InternetGateway
+    Type: 'AWS::EC2::InternetGateway'
     Properties:
       Tags:
         - Key: Name
-          Value: !Join [ "", [ !Ref NameOfService, " - ", "IGW" ] ]
-
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - IGW
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e9da52c0-3485-4220-a15a-044e358c063d
   InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
+    Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC1
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: bcdd4f86-7314-49a2-b006-7f790d83de1b
   PublicSubnet1:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC1
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
       CidrBlock: !Ref PublicSubnet1CIDR
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} - Public Subnet (AZ1)
-
+          Value: !Sub '${NameOfService} - Public Subnet (AZ1)'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7431ba53-a564-4e20-b838-b55fed1b0c0e
   PublicSubnet2:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC1
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
       CidrBlock: !Ref PublicSubnet2CIDR
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} - Public Subnet (AZ2)
-
+          Value: !Sub '${NameOfService} - Public Subnet (AZ2)'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c5bcd159-dedd-4bf6-aff3-61bf965d340a
   PrivateSubnet1:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC1
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
       CidrBlock: !Ref PrivateSubnet1CIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} - Private Subnet (AZ1)
-
+          Value: !Sub '${NameOfService} - Private Subnet (AZ1)'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 46581c4a-e5f3-4394-8585-b8d3d6130bd9
   PrivateSubnet2:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC1
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
       CidrBlock: !Ref PrivateSubnet2CIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} - Private Subnet (AZ2)
-
+          Value: !Sub '${NameOfService} - Private Subnet (AZ2)'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 16fc49b1-f64d-4450-aef5-fbbfbeed31ad
   PrivateSubnet3:
-    Type: AWS::EC2::Subnet
+    Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC1
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
       CidrBlock: !Ref PrivateSubnet3CIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} - FIREWALL Subnet (AZ1)
-
-### PUBLIC ROUTE TABLE ###
+          Value: !Sub '${NameOfService} - FIREWALL Subnet (AZ1)'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 52dbbe09-b638-431e-bfdd-94ec27653b8a
   PublicRouteTable:
-    Type: AWS::EC2::RouteTable
+    Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref VPC1
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} Public Routes
-
+          Value: !Sub '${NameOfService} Public Routes'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 871a4d16-7888-4044-a880-9018a1fe1c56
   DefaultPublicRoute:
-    Type: AWS::EC2::Route
+    Type: 'AWS::EC2::Route'
     DependsOn: InternetGatewayAttachment
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 4e43008a-5801-495c-9e1a-00dc6a198c2a
   PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
-
   PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
-
-### PRIVATE ROUTE TABLE ###
   PrivateRouteTable:
-    Type: AWS::EC2::RouteTable
+    Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref VPC1
       Tags:
         - Key: Name
-          Value: !Sub ${NameOfService} Private Routes
- 
+          Value: !Sub '${NameOfService} Private Routes'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 2d86db63-f918-41e5-87d3-91e621ebd41e
   PrivateSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet1
- 
   PrivateSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet2
-
-###### VPC Endpoints ########
+  PrivateSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet3
   S3Endpoint:
-    Type: AWS::EC2::VPCEndpoint
+    Type: 'AWS::EC2::VPCEndpoint'
     Properties:
       PolicyDocument:
         Version: 2012-10-17
@@ -196,59 +247,66 @@ Resources:
           - Effect: Allow
             Principal: '*'
             Action:
-              - "s3:GetObject"
+              - 's3:GetObject'
             Resource:
-              - "*"  
-      RouteTableIds: 
+              - '*'
+      RouteTableIds:
         - !Ref PrivateRouteTable
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
       VpcId: !Ref VPC1
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 59323511-c6d6-4515-8594-58685f259e9b
   SSMEndpoint:
-    Type: AWS::EC2::VPCEndpoint
+    Type: 'AWS::EC2::VPCEndpoint'
     Properties:
       PrivateDnsEnabled: true
-      SecurityGroupIds: 
+      SecurityGroupIds:
         - !GetAtt VPC1.DefaultSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      SubnetIds: 
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      SubnetIds:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
-      VpcEndpointType: 'Interface'
+      VpcEndpointType: Interface
       VpcId: !Ref VPC1
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 52054cf1-ee5a-469b-b966-7ea941337bf5
   SSMMessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
+    Type: 'AWS::EC2::VPCEndpoint'
     Properties:
       PrivateDnsEnabled: true
-      SecurityGroupIds: 
+      SecurityGroupIds:
         - !GetAtt VPC1.DefaultSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      SubnetIds: 
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
+      SubnetIds:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
-      VpcEndpointType: 'Interface'
+      VpcEndpointType: Interface
       VpcId: !Ref VPC1
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: b3108a48-5498-4d87-9080-4d344bff7193
   EC2MessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
+    Type: 'AWS::EC2::VPCEndpoint'
     Properties:
       PrivateDnsEnabled: true
-      SecurityGroupIds: 
+      SecurityGroupIds:
         - !GetAtt VPC1.DefaultSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      SubnetIds: 
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
+      SubnetIds:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
-      VpcEndpointType: 'Interface'
+      VpcEndpointType: Interface
       VpcId: !Ref VPC1
-
-###### INSTANCES #######
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: b1b2d61a-a41a-4d0d-88aa-ea0a7e794ddb
   AmazonSSMRoleForInstancesQuickSetup:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
           - Effect: Allow
             Principal:
@@ -258,214 +316,367 @@ Resources:
               - 'sts:AssumeRole'
       Path: /
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 88f65bfe-2a19-4432-b239-d6063c51b64b
   Ec2InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties: 
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
       InstanceProfileName: woku-ec2-instance-profile
       Path: /
-      Roles: 
+      Roles:
         - !Ref AmazonSSMRoleForInstancesQuickSetup
-
-### EC2 Private ###
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: ec773759-bfeb-4e69-b524-b4b534165a11
   Ec2Instance1:
     Type: 'AWS::EC2::Instance'
     DependsOn: S3Endpoint
     Properties:
       InstanceType: !Ref InstanceType
-      # instead of just "ami-05cd35b907b4ffe77" specifig for current region
       ImageId:
-        Fn::FindInMap:
-        - RegionMap
-        - !Ref AWS::Region
-        - AMI
-      Tags: 
-        - Key: "Name"
-          # in yaml full format
-          Value: !Join [ "", [ !Ref NameOfService, " - ", "EC2 Private 1" ] ]
-
-        - Key: "DoNotStop"
-          # in yaml short format of 'flow' style
-          Value: !Join [ "" , [ "EC2 Instance for ",!Ref AWS::Region," in flow style by WoKu"]]
-
-        - Key: "Comment 2"
-          # in yaml short format of 'block' style
+        'Fn::FindInMap':
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - AMI
+      Tags:
+        - Key: Name
           Value: !Join 
-            - ""
-            - - "EC2 Instance for "
-              - !Ref AWS::Region
-              - " in block style by WoKu"
-      KeyName: !Ref KeyName
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - EC2 Private 1
+        - Key: DoNotStop
+          Value: !Join 
+            - ''
+            - - 'EC2 Instance for '
+              - !Ref 'AWS::Region'
+              - ' in flow style by WoKu'
+        - Key: Comment 2
+          Value: !Join 
+            - ''
+            - - 'EC2 Instance for '
+              - !Ref 'AWS::Region'
+              - ' in block style by WoKu'
+#      KeyName: !Ref KeyName
       IamInstanceProfile: !Ref Ec2InstanceProfile
       UserData:
-        'Fn::Base64': 
-          !Sub |
-            #!/bin/bash -xe            
-            cd /tmp
-            yum install -y https://s3.eu-west-1.amazonaws.com/amazon-ssm-eu-west-1/latest/linux_amd64/amazon-ssm-agent.rpm
-            systemctl enable amazon-ssm-agent
-            systemctl start amazon-ssm-agent
-            # Install stress tools
-            amazon-linux-extras install epel -y
-            yum install stress -y  
-            yum install htop -y  
-            yum install httpd
-            echo "Wojtek PRV instance webpage" > /var/www/html/index.html
-            service httpd start
+        'Fn::Base64': !Sub >
+          #!/bin/bash -xe            
+
+          cd /tmp
+
+          yum install -y
+          https://s3.eu-west-1.amazonaws.com/amazon-ssm-eu-west-1/latest/linux_amd64/amazon-ssm-agent.rpm
+
+          systemctl enable amazon-ssm-agent
+
+          systemctl start amazon-ssm-agent
+
+          # Install stress tools
+
+          amazon-linux-extras install epel -y
+
+          yum install stress -y  
+
+          yum install htop -y  
+
+          yum install httpd -y
+
+          echo "Wojtek PRV instance webpage" > /var/www/html/index.html
+          echo "NLB healthcheck" > /var/www/html/nlb.html
+          echo "ALB healthcheck" > /var/www/html/alb.html
+          
+
+          service httpd start
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeType: gp2
             DeleteOnTermination: 'true'
             VolumeSize: !Ref InstanceHDDSize
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: "false"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'false'
           SubnetId: !Ref PrivateSubnet1
           DeviceIndex: '0'
-          GroupSet: 
+          GroupSet:
             - !Ref SecurityGroup1
-
-### EC2 Public ###
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 1b74706a-d43a-48d9-80f8-1c0a6d8ae8a4
   Ec2Instance2:
     Type: 'AWS::EC2::Instance'
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT5M    
-    Metadata: 
-      AWS::CloudFormation::Init:
+        Timeout: PT5M
+    Metadata:
+      'AWS::CloudFormation::Init':
         configSets:
           InstallAndRun:
-          - phpinstall
-        phpinstall: 
-          packages: 
+            - phpinstall
+        phpinstall:
+          packages:
             yum:
               httpd: []
               php: []
               htop: []
-          files: 
+          files:
             /var/www/html/index.php:
-              content: !Sub 
-                <?php print "Hello world Wojtek was here!"; ?>
+              content: !Sub <?php print "Hello world Wojtek was here!"; ?>
               mode: '000600'
               owner: apache
               group: apache
-          services: 
+          services:
             sysvinit:
               httpd:
                 enabled: 'true'
                 ensureRunning: 'true'
+      'AWS::CloudFormation::Designer':
+        id: 07771dca-81e2-4cd3-a558-5f5866fb0db1
     Properties:
-      InstanceType: !Ref InstanceType 
+      InstanceType: !Ref InstanceType
       ImageId:
-        Fn::FindInMap:
-        - RegionMap
-        - !Ref AWS::Region
-        - AMI
-      Tags: 
-        - Key: "Name"
-          Value: !Join [ "", [ !Ref NameOfService, " - ", "EC2 Public 1" ] ]
-        - Key: "DoNotStop"
-          Value: ""
-        - Key: "Project"
+        'Fn::FindInMap':
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - AMI
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - EC2 Public 1
+        - Key: DoNotStop
+          Value: ''
+        - Key: Project
           Value: !Ref NameOfService
-      KeyName: !Ref KeyName
+#      KeyName: !Ref KeyName
       IamInstanceProfile: !Ref Ec2InstanceProfile
       UserData:
-        'Fn::Base64': 
-          !Sub |
-            #!/bin/bash
-            cd /tmp
-            yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
-            systemctl enable amazon-ssm-agent
-            systemctl start amazon-ssm-agent       
-            # Install stress tools
-            amazon-linux-extras install epel -y
-            yum install stress -y  
-            # Ensure AWS CFN Bootstrap is the latest
-            yum install -y aws-cfn-bootstrap
-            # Install the files and packages from the metadata
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Ec2Instance2 --configset InstallAndRun --region ${AWS::Region}
-            # Install deamon to listen for metadata changes
-            #
-            # Check if instance is sending signal back to creation policy after the stack successfull
-            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Ec2Instance2 --region ${AWS::Region}
+        'Fn::Base64': !Sub >
+          #!/bin/bash
+
+          cd /tmp
+
+          yum install -y
+          https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+
+          systemctl enable amazon-ssm-agent
+
+          systemctl start amazon-ssm-agent       
+
+          # Install stress tools
+
+          amazon-linux-extras install epel -y
+
+          yum install stress -y  
+
+          # Ensure AWS CFN Bootstrap is the latest
+
+          yum install -y aws-cfn-bootstrap
+
+          # Install the files and packages from the metadata
+
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource
+          Ec2Instance2 --configset InstallAndRun --region ${AWS::Region}
+
+          # Install deamon to listen for metadata changes
+
+          #
+
+          # Check if instance is sending signal back to creation policy after
+          the stack successfull
+
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource
+          Ec2Instance2 --region ${AWS::Region}
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeType: gp2
             DeleteOnTermination: 'true'
             VolumeSize: !Ref InstanceHDDSize
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'true'
           SubnetId: !Ref PublicSubnet1
           DeviceIndex: '0'
-          GroupSet: 
+          GroupSet:
             - !Ref SecurityGroup2
 
-### Security ###
+  NetworkLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Description: 'The NLB that handles network traffic coming into protected subnet'
+    Properties:
+      Subnets: 
+      - Ref: PrivateSubnet1
+      Type: 'network'
+  NLBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Description: |
+      A listener attached to the load balancer listening on port 80, forwarding to
+      the LBTargetGroup
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroup
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: '80'
+      Protocol: TCP      
+  NLBTargetGroup:    # Target Group for NLB - ec2 instance based
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /nlb.html
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: '200'
+      Name: NLBTargetGroup
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '20'
+      Targets:
+      - Id:
+          Ref: Ec2Instance1
+        Port: 80
+      UnhealthyThresholdCount: 3
+      VpcId:
+        Ref: 'VPC1'
+      Tags:
+      - Key: Name
+        Value: NLBTargetGroup
+      - Key: Port
+        Value: 80
+#  ALBListener:
+#    Type: AWS::ElasticLoadBalancingV2::Listener
+#    Properties:
+#      DefaultActions:
+#        - Type: forward
+#          TargetGroupArn:
+#            Ref: EC2TargetGroup  # will be replaced by NLB private static IP target group
+#      LoadBalancerArn:
+#          Ref: ApplicationLoadBalancer
+#      Port: 80
+#      Protocol: HTTP
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing # or internal
+      Subnets:
+      - Ref: PublicSubnet1
+      - Ref: PublicSubnet2
+      SecurityGroups:
+      - Ref: ALBSecurityGroup
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP access from Internet
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '0.0.0.0/0'
+          ToPort: '80'
+          CidrIp: !Ref VpcCIDR
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - ELB Security Group
   SecurityGroup1:
-    Type: "AWS::EC2::SecurityGroup"
+    Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable SSH access via port 22 from VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: "22"
-          ToPort: "22"
+          FromPort: '22'
+          ToPort: '22'
           CidrIp: !Ref VpcCIDR
         - IpProtocol: tcp
-          FromPort: "443"
-          ToPort: "443"
+          FromPort: '443'
+          ToPort: '443'
           CidrIp: !Ref VpcCIDR
-   #     - SourceSecurityGroupId: !GetAtt VPC1.DefaultSecurityGroup
-   #       IpProtocol: tcp
-   #       FromPort: "443"
-   #       ToPort: "443"
       VpcId: !Ref VPC1
-      Tags: 
-        - Key: "Name"
-          Value: !Join [ "", [ !Ref NameOfService, " - ", "Security Group 1" ] ]  
-
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - Security Group 1
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 06a95100-e9c1-4f8c-a82b-55481984a09e
   SecurityGroup2:
-    Type: "AWS::EC2::SecurityGroup"
+    Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable SSH access via port 22 from Cybercom and 80, 443 from Internet
+      GroupDescription: 'Enable SSH access via port 22 from Home and 80, 443 from Internet'
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: "22"
-          ToPort: "22"
+          FromPort: '22'
+          ToPort: '22'
           CidrIp: !Ref SafePublicIp
         - IpProtocol: tcp
-          FromPort: "80"
-          ToPort: "80"
+          FromPort: '80'
+          ToPort: '80'
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: "443"
-          ToPort: "443"
+          FromPort: '443'
+          ToPort: '443'
           CidrIp: 0.0.0.0/0
       VpcId: !Ref VPC1
-      Tags: 
-        - Key: "Name"
-          Value: !Join [ "", [ !Ref NameOfService, " - ", "Security Group 2" ] ]  
-
-  # For SSM traffic from VPC
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - OPEN SSH and http/https
+  SecurityGroup3:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Open 80, 443 from Internet'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - OPEN http/https
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 43638557-4df2-45a7-9528-3b1164c32988
   DefaultSecurityGroup:
-    Type: AWS::EC2::SecurityGroupIngress
+    Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
       GroupId: !GetAtt VPC1.DefaultSecurityGroup
       IpProtocol: tcp
-      FromPort: "443"
-      ToPort: "443"
+      FromPort: '443'
+      ToPort: '443'
       CidrIp: !Ref VpcCIDR
-
 Outputs:
   VPC:
     Description: A reference to the created VPC
     Value: !Ref VPC1
   PublicIp:
-    Value: !GetAtt
+    Value: !GetAtt 
       - Ec2Instance2
       - PublicIp
   Website:
-    Description: Public DNS for ec2 
+    Description: Public DNS for ec2
     Value: !Sub 'http://${Ec2Instance2.PublicDnsName}'
