@@ -2,7 +2,7 @@ Parameters:
   NameOfService:
     Description: The name of the service this stack is to be used for.
     Type: String
-    Default: WOKUService
+    Default: NordcloudDMZService
 #  KeyName:
 #    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
 #    Type: 'AWS::EC2::KeyPair::KeyName'
@@ -82,7 +82,7 @@ Resources:
             - ''
             - - !Ref NameOfService
               - ' - '
-              - VPC
+              - DMZ
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties:
@@ -226,7 +226,6 @@ Resources:
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
       SubnetIds:
         - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
       VpcEndpointType: Interface
       VpcId: !Ref VPC1
   SSMMessagesEndpoint:
@@ -238,7 +237,6 @@ Resources:
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
       SubnetIds:
         - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
       VpcEndpointType: Interface
       VpcId: !Ref VPC1
   EC2MessagesEndpoint:
@@ -250,7 +248,6 @@ Resources:
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
       SubnetIds:
         - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
       VpcEndpointType: Interface
       VpcId: !Ref VPC1
   AmazonSSMRoleForInstancesQuickSetup:
@@ -308,7 +305,11 @@ Resources:
             VolumeSize: !Ref InstanceHDDSize
       Tags:
         - Key: Name
-          Value: EC2 Private 1
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - EC2 - Private 1
       #KeyName: !Ref KeyName
       IamInstanceProfile: !Ref Ec2InstanceProfile
       NetworkInterfaces:
@@ -321,8 +322,6 @@ Resources:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Description: 'The NLB that handles network traffic coming into protected subnet'
     Properties:
-      #Subnets: 
-      #- Ref PrivateSubnet1
       SubnetMappings:
       - PrivateIPv4Address: !Ref NLBprivateIP
         SubnetId: !Ref PrivateSubnet1
@@ -668,4 +667,4 @@ Outputs:
     Value: !Ref VPC1
   Website:
     Description: Public DNS for Application Loadballancer
-    Value: !Sub 'http://${ApplicationLoadBalancer.PublicDnsName}'
+    Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}'

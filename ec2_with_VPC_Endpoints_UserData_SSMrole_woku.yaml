@@ -1,11 +1,11 @@
-Parameters:
+ Parameters:
   NameOfService:
     Description: The name of the service this stack is to be used for.
     Type: String
     Default: WOKUService
-#  KeyName:
-#    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
-#    Type: 'AWS::EC2::KeyPair::KeyName'
+  #KeyName:
+  #  Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+  #  Type: 'AWS::EC2::KeyPair::KeyName'
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
