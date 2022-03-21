@@ -1,2 +1,4 @@
 TO jest nowy plik w DEV 2
 Nowa zamina w dev2 przez www
+Kolejna zmiana lokalna
+asdfasdfadsf dassds

@@ -1,0 +1,223 @@
+ Parameters:
+  NameOfService:
+    Description: The name of the service this stack is to be used for.
+    Type: String
+    Default: WOKUService
+  #KeyName:
+  #  Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+  #  Type: 'AWS::EC2::KeyPair::KeyName'
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 172.18.0.0/16
+  PublicSubnet1CIDR:
+    Description: >-
+      Please enter the IP range (CIDR notation) for the public subnet in the
+      first Availability Zone
+    Type: String
+    Default: 172.18.10.0/24
+  PublicSubnet2CIDR:
+    Description: >-
+      Please enter the IP range (CIDR notation) for the public subnet in the
+      second Availability Zone
+    Type: String
+    Default: 172.18.11.0/24
+  PrivateSubnet1CIDR:
+    Description: >-
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      first Availability Zone
+    Type: String
+    Default: 172.18.200.0/24
+  PrivateSubnet2CIDR:
+    Description: >-
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      second Availability Zone
+    Type: String
+    Default: 172.18.210.0/24
+  PrivateSubnet3CIDR:
+    Description: >-
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      second Availability Zone
+    Type: String
+    Default: 172.18.123.0/24
+  SafePublicIp:
+    Description: Please enter the IP from you can establish safe connection
+    Type: String
+    Default: 83.142.194.60/32
+
+Mappings:
+  RegionMap:
+    eu-west-1:
+      AMI: ami-05cd35b907b4ffe77
+    eu-central-1:
+      AMI: ami-058e6df85cfc7760b
+    eu-north-1:
+      AMI: ami-06bfd6343550d4a29
+    eu-west-3:
+      AMI: ami-0d3c032f5934e1b41
+Resources:
+  VPC1:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - VPC
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - IGW
+  InternetGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC1
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC1
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${NameOfService} - Public Subnet (AZ1)'
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC1
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${NameOfService} - Public Subnet (AZ2)'
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC1
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${NameOfService} - Private Subnet (AZ1)'
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC1
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${NameOfService} - Private Subnet (AZ2)'
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: !Sub '${NameOfService} Public Routes'
+  DefaultPublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: !Sub '${NameOfService} Private Routes'
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+
+  SecurityGroup1:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable SSH access via port 22 from VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3389'
+          ToPort: '3389'
+          CidrIp: !Ref SafePublicIp
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - RDP Access from WOKU's Home
+  SecurityGroup2:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Enable SSH access via port 22 from Home and 80, 443 from Internet'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SafePublicIp
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - OPEN SSH and http/https
+
+Outputs:
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC1

@@ -1,11 +1,11 @@
- Parameters:
+Parameters:
   NameOfService:
     Description: The name of the service this stack is to be used for.
     Type: String
     Default: WOKUService
-  #KeyName:
-  #  Description: Name of an existing EC2 KeyPair to enable SSH access into the server
-  #  Type: 'AWS::EC2::KeyPair::KeyName'
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+    Type: 'AWS::EC2::KeyPair::KeyName'
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
@@ -34,16 +34,6 @@
       second Availability Zone
     Type: String
     Default: 172.18.210.0/24
-  PrivateSubnet3CIDR:
-    Description: >-
-      Please enter the IP range (CIDR notation) for the private subnet in the
-      second Availability Zone
-    Type: String
-    Default: 172.18.123.0/24
-  NLBprivateIP:
-    Description: Please enter the IP for your NLB
-    Type: String
-    Default: 172.18.200.100
   SafePublicIp:
     Description: Please enter the IP from you can establish safe connection
     Type: String
@@ -152,18 +142,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${NameOfService} - Private Subnet (AZ2)'
-  PrivateSubnet3:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref VPC1
-      AvailabilityZone: !Select 
-        - 0
-        - !GetAZs ''
-      CidrBlock: !Ref PrivateSubnet3CIDR
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub '${NameOfService} - FIREWALL Subnet (AZ1)'
   PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -178,13 +156,6 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-  FirewallPublicRoute1:
-    Type: AWS::EC2::Route
-    DependsOn: NetworkDMZFirewall
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: !Ref PrivateSubnet1CIDR
-      VpcEndpointId: !GetAtt NetworkDMZFirewallVpceIds.FwVpceId1
   PublicSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
@@ -202,14 +173,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${NameOfService} Private Routes'
-  FirewallPrivateRoute1:
-    Type: AWS::EC2::Route
-    DependsOn: NetworkDMZFirewall
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      VpcEndpointId: !GetAtt NetworkDMZFirewallVpceIds.FwVpceId1
-
   PrivateSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
@@ -220,11 +183,6 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet2
-  PrivateSubnet3RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref PrivateSubnet3
   S3Endpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
@@ -333,7 +291,7 @@ Resources:
       Tags:
         - Key: Name
           Value: EC2 Private 1
-      #KeyName: !Ref KeyName
+      KeyName: !Ref KeyName
       IamInstanceProfile: !Ref Ec2InstanceProfile
       NetworkInterfaces:
         - AssociatePublicIpAddress: 'false'
@@ -396,7 +354,7 @@ Resources:
             - - 'EC2 Instance for '
               - !Ref 'AWS::Region'
               - ' in block style by WoKu'
-      #KeyName: !Ref KeyName
+      KeyName: !Ref KeyName
       IamInstanceProfile: !Ref Ec2InstanceProfile
       UserData:
         'Fn::Base64': !Sub >
@@ -448,116 +406,6 @@ Resources:
           GroupSet:
             - !Ref SecurityGroup2
 
-  NetworkLoadBalancer:
-    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
-    Description: 'The NLB that handles network traffic coming into protected subnet'
-    Properties:
-      #Subnets: 
-      #- Ref PrivateSubnet1
-      SubnetMappings:
-      - PrivateIPv4Address: !Ref NLBprivateIP
-        SubnetId: !Ref PrivateSubnet1
-      Type: 'network'
-      Scheme: internal
-  NLBListener:
-    Type: 'AWS::ElasticLoadBalancingV2::Listener'
-    Description: |
-      A listener attached to the load balancer listening on port 80, forwarding to
-      the LBTargetGroup
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref NLBTargetGroup
-      LoadBalancerArn: !Ref NetworkLoadBalancer
-      Port: '80'
-      Protocol: TCP      
-
-  NLBTargetGroup:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
-    Description: |
-      Target group for the LoadBalancer. Note that the Envoy autoscaling group sets its
-      TargetGroupARN field to this target group, ensuring Envoy instances are registered
-      with the target group
-    Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthyThresholdCount: 3
-      Port: 80
-      Name: NLBTargetGroup
-      HealthCheckPath: /nlb.html
-      HealthCheckProtocol: HTTP
-      Protocol: TCP
-      UnhealthyThresholdCount: 3
-      VpcId: !Ref VPC1
-      TargetType: instance
-      Targets:
-      - Id: !Ref Ec2Instance1
-        Port: 80
-      Tags:
-      - Key: Name
-        Value: NLBTargetGroup
-
-  ALBTargetGroup:    # Target Group for ALB - NLB private IP based
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /alb.html
-      HealthCheckTimeoutSeconds: 15
-      HealthyThresholdCount: 5
-      Matcher:
-        HttpCode: '200'
-      Name: ALBTargetGroup
-      Port: 80
-      Protocol: HTTP
-      TargetGroupAttributes:
-      - Key: deregistration_delay.timeout_seconds
-        Value: '20'
-      TargetType: ip
-      Targets:
-      - Id: !Ref NLBprivateIP
-        Port: 80
-      UnhealthyThresholdCount: 3
-      VpcId: !Ref VPC1
-      Tags:
-      - Key: Name
-        Value: ALBTargetGroup
-  ALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn:
-            Ref: ALBTargetGroup  # will be replaced by NLB private static IP target group
-      LoadBalancerArn:
-          Ref: ApplicationLoadBalancer
-      Port: 80
-      Protocol: HTTP
-  ApplicationLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Scheme: internet-facing # or internal
-      Subnets:
-      - Ref: PublicSubnet1
-      - Ref: PublicSubnet2
-      SecurityGroups:
-      - Ref: ALBSecurityGroup
-  ALBSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Enable HTTP access from Internet
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: 0.0.0.0/0
-      VpcId: !Ref VPC1
-      Tags:
-        - Key: Name
-          Value: !Join 
-            - ''
-            - - !Ref NameOfService
-              - ' - '
-              - ALB Security Group
   SecurityGroup1:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -633,166 +481,6 @@ Resources:
       FromPort: '443'
       ToPort: '443'
       CidrIp: !Ref VpcCIDR
-  NetworkDMZFirewall:
-    Type: AWS::NetworkFirewall::Firewall
-    Properties:
-      FirewallName: NetworkDMZFirewall
-      FirewallPolicyArn: !Ref NetworkDMZFirewallPolicy
-      VpcId: !Ref VPC1
-      SubnetMappings:
-        - SubnetId: !Ref PrivateSubnet3
-      Description: Firewall description goes here
-      Tags:
-        - Key: Name
-          Value: NetworkDMZFirewall
-  NetworkDMZFirewallPolicy:
-    Type: 'AWS::NetworkFirewall::FirewallPolicy'
-    Properties:
-      FirewallPolicyName: NetworkFirewallDMZPolicy
-      FirewallPolicy:
-        StatelessDefaultActions:
-          - 'aws:forward_to_sfe'
-        StatelessFragmentDefaultActions:
-          - 'aws:forward_to_sfe'
-        StatefulRuleGroupReferences:
-          - ResourceArn: !Ref NFStatefulRuleGroup1
-      Description: FirewallPolicy description goes here
-      Tags:
-        - Key: Name
-          Value: NetworkFirewallDMZPolicy
-  NFStatefulRuleGroup1:
-    Type: 'AWS::NetworkFirewall::RuleGroup'
-    Properties:
-      RuleGroupName: !Sub "domain-allow-${AWS::StackName}"
-      Type: STATEFUL
-      Capacity: 100
-      RuleGroup:
-        RulesSource:
-          StatefulRules:
-            - Action: PASS
-              Header:
-                Direction: ANY
-                Protocol: TCP
-                Destination: ANY
-                Source: ANY
-                DestinationPort: ANY
-                SourcePort: ANY
-              RuleOptions:
-                - Keyword: "sid:1"
-      Tags:
-        - Key: Name
-          Value: !Sub "domain-allow-${AWS::StackName}"   
-  FirewallLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-        LogGroupName: !Sub ${AWS::StackName}-FirewallLogs
-        RetentionInDays: 1
-  NetworkDMZFirewallLoggingConfiguration:
-    Type: 'AWS::NetworkFirewall::LoggingConfiguration'
-    Properties:
-      FirewallArn: !Ref NetworkDMZFirewall
-      LoggingConfiguration:
-        LogDestinationConfigs:
-          - LogType: ALERT
-            LogDestinationType: CloudWatchLogs
-            LogDestination:
-              logGroup: !Ref FirewallLogGroup
-          - LogType: FLOW
-            LogDestinationType: CloudWatchLogs
-            LogDestination:
-              logGroup: !Ref FirewallLogGroup
-  NetworkDMZFirewallVpceIds:
-    Type: Custom::DescribeVpcEndpoints
-    Properties:
-      ServiceToken: !GetAtt LambdaRetrieveVpceId.Arn
-      Az1: !Select 
-        - 0
-        - !GetAZs ''
-      Az2: !Select 
-        - 1
-        - !GetAZs ''
-      FwArn: !Ref NetworkDMZFirewall
-
-  FwLambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "${AWS::StackName}-${AWS::Region}-nfw-lambda-role"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: !GetAtt RetrieveVpcIdLogGroup.Arn
-              - Effect: Allow
-                Action:
-                  - network-firewall:DescribeFirewall
-                Resource: "*"
-
-  RetrieveVpcIdLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-        LogGroupName: !Sub /aws/lambda/${AWS::StackName}-retrieve-vpceid
-        RetentionInDays: 1
-
-  LambdaRetrieveVpceId:
-    Type: AWS::Lambda::Function
-    DependsOn: RetrieveVpcIdLogGroup
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-retrieve-vpceid
-      Handler: "index.handler"
-      Role: !GetAtt
-        - FwLambdaExecutionRole
-        - Arn
-      Code:
-        ZipFile: |
-          import boto3
-          import cfnresponse
-          import json
-          import logging
-          def handler(event, context):
-              logger = logging.getLogger()
-              logger.setLevel(logging.INFO)
-              responseData = {}
-              responseStatus = cfnresponse.FAILED
-              logger.info('Received event: {}'.format(json.dumps(event)))
-              if event["RequestType"] == "Delete":
-                  responseStatus = cfnresponse.SUCCESS
-                  cfnresponse.send(event, context, responseStatus, responseData)
-              if event["RequestType"] == "Create":
-                  try:
-                      Az1 = event["ResourceProperties"]["Az1"]
-                      Az2 = event["ResourceProperties"]["Az2"]
-                      FwArn = event["ResourceProperties"]["FwArn"]
-                  except Exception as e:
-                      logger.info('AZ retrieval failure: {}'.format(e))
-                  try:
-                      nfw = boto3.client('network-firewall')
-                  except Exception as e:
-                      logger.info('boto3.client failure: {}'.format(e))
-                  try:
-                      NfwResponse=nfw.describe_firewall(FirewallArn=FwArn)
-                      VpceId1 = NfwResponse['FirewallStatus']['SyncStates'][Az1]['Attachment']['EndpointId']                  
-                  except Exception as e:
-                      logger.info('ec2.describe_firewall failure: {}'.format(e))
-                  responseData['FwVpceId1'] = VpceId1
-                  responseStatus = cfnresponse.SUCCESS
-                  cfnresponse.send(event, context, responseStatus, responseData)
-      Runtime: python3.7
-      Timeout: 30
 Outputs:
   VPC:
     Description: A reference to the created VPC
