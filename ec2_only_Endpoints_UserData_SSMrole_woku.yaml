@@ -1,0 +1,157 @@
+Parameters:
+  NameOfService:
+    Description: The name of the service this stack is to be used for.
+    Type: String
+    Default: WOKUService
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access into the server
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  VPC1id:
+    Description: Please choose VPC
+    Type: 'AWS::EC2::VPC::Id'
+  VPC1SecurityGroupId:
+    Description: Provide Security Group ID
+    Type: 'AWS::EC2::SecurityGroup::Id'
+  PrivateSubnet1id:
+    Description: Please choose subnet
+    Type: 'AWS::EC2::Subnet::Id' 
+
+  SafePublicIp:
+    Description: Please enter the IP from you can establish safe connection
+    Type: String
+    Default: 83.142.194.60/32
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.small
+    AllowedValues:
+      - t1.micro
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - c5a.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  InstanceHDDSize:
+    Description: EC2 instance HDD Size
+    Type: Number
+    Default: 20
+Mappings:
+  RegionMap:
+    eu-west-1:
+      AMI: ami-05cd35b907b4ffe77
+    eu-central-1:
+      AMI: ami-058e6df85cfc7760b
+    eu-north-1:
+      AMI: ami-06bfd6343550d4a29
+    eu-west-3:
+      AMI: ami-0d3c032f5934e1b41
+Resources:
+  SSMEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds: 
+        - !Ref VPC1SecurityGroupId
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      SubnetIds:
+        - !Ref PrivateSubnet1id
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC1id
+  SSMMessagesEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref VPC1SecurityGroupId
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
+      SubnetIds:
+        - !Ref PrivateSubnet1id
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC1id
+  EC2MessagesEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref VPC1SecurityGroupId
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
+      SubnetIds:
+        - !Ref PrivateSubnet1id
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC1id
+  AmazonSSMRoleForInstancesQuickSetup:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+  Ec2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: woku-ec2-instance-profile
+      Path: /
+      Roles:
+        - !Ref AmazonSSMRoleForInstancesQuickSetup
+  Ec2Instance1:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId:
+        'Fn::FindInMap':
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - AMI  
+      UserData: 
+        'Fn::Base64': 
+          !Sub | 
+            #!/bin/bash -xe
+            sudo systemctl enable amazon-ssm-agent
+            sudo systemctl start amazon-ssm-agent
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp2
+            DeleteOnTermination: 'true'
+            VolumeSize: !Ref InstanceHDDSize
+      Tags:
+        - Key: Name
+          Value: EC2 Private for SSM tests
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref Ec2InstanceProfile
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'false'
+          SubnetId: !Ref PrivateSubnet1id
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref SecurityGroupSafe
+ 
+
+  SecurityGroupSafe:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Enable SSH access via port 22 from Home'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SafePublicIp
+      VpcId: !Ref VPC1id
+      Tags:
+        - Key: Name
+          Value: !Join 
+            - ''
+            - - !Ref NameOfService
+              - ' - '
+              - OPEN SSH from WOKU
+

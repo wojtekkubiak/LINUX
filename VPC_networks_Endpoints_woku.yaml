@@ -1,11 +1,8 @@
- Parameters:
+Parameters:
   NameOfService:
     Description: The name of the service this stack is to be used for.
     Type: String
     Default: WOKUService
-  #KeyName:
-  #  Description: Name of an existing EC2 KeyPair to enable SSH access into the server
-  #  Type: 'AWS::EC2::KeyPair::KeyName'
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
@@ -44,17 +41,6 @@
     Description: Please enter the IP from you can establish safe connection
     Type: String
     Default: 83.142.194.60/32
-
-Mappings:
-  RegionMap:
-    eu-west-1:
-      AMI: ami-05cd35b907b4ffe77
-    eu-central-1:
-      AMI: ami-058e6df85cfc7760b
-    eu-north-1:
-      AMI: ami-06bfd6343550d4a29
-    eu-west-3:
-      AMI: ami-0d3c032f5934e1b41
 Resources:
   VPC1:
     Type: 'AWS::EC2::VPC'
@@ -177,7 +163,7 @@ Resources:
   SecurityGroup1:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable SSH access via port 22 from VPC
+      GroupDescription: Enable RDP from Home
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '3389'
