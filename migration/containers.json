@@ -1,0 +1,10 @@
+[
+  {
+    "Description": "ubuntu-server",
+    "Format": "vmdk",
+    "UserBucket": {
+        "S3Bucket": "migration-bucket-34253453453",
+        "S3Key": "UBUNTU-SERVER-disk001.vmdk"
+    }
+}]
+

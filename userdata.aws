@@ -1,0 +1,24 @@
+#!/bin/bash 
+declare -A USERKEY
+USERKEY[woku]="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPbYDu7CqqcEu6n/n+jrPrb6GEaZYmWLVvQppgcrZTnp WOKU-AWS-2022-ssh-key"
+USERKEY[mika]="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIGbMjkaOKv1iQ8AURdmWy1Vew0QlNpgD0x8KE52lmct mk@Mikayels-MBP-3"
+USERKEY[mark]="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDA8uQ59x62p38hVNiqNYFLjR/ALvlNpBRzaaEapcZEENSbG3ewSUhgiWNUr4GRNdJleHfwgOoVBivixeowhOoG9nE3qVSSVTl3REl+M8dQbr6gBfbjGDm9q8heMSL3b3MnzyOPj42+uLxQx+cIA07boRLLN5pfjSZdhWHSB+xcCq1tLRZoA/7xo1yaZXLfif/0BObIXu18WFzfO7C5OBKfdTVcQWY+npBMx4tojUtgreuFCVmYjpkbRokPA5M1i1lS4eF+U0ItCIkmZi/vla8HFNIKWwsLXcaAeLKkqjptWpcLjS206Zeu0SoMY01qnplnyWUUupYLc3FftjynpkM+gWp4IQg4c9Uk5qRbnzo0Yi6DdffxPsfMR92anRg2dOQGTsHhZRrd8ScZq6VM8pYJ06PR/udx46Igjr5sNOSP4w/EpMq+UQClvHdZRENWTvfqbeRiFRJ2672eHZaf5MBpQ2fjznstY8wofu8g2vvRf/qJ41QeeiLbp+c4Dxfjl0U= mark@MSI"
+declare -A SUDOUSER
+SUDOUSER[woku]=y
+SUDOUSER[mika]=y
+SODOUSER[mark]=y
+
+for user in "${!USERKEY[@]}" ; do
+  adduser $user
+  usermod -a -G adm $user
+
+  if [ "${SUDOUSER[$user]}" == 'y' ] ; then
+    echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/90-cloud-init-users
+  fi
+
+  mkdir /home/$user/.ssh
+  echo "${USERKEY[$user]}" >> /home/$user/.ssh/authorized_keys
+
+  chown -R $user:$user /home/$user/.ssh
+  chmod -R go-rx /home/$user/.ssh
+done
